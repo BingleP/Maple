@@ -20,8 +20,8 @@ export function Header({ articleCount, bookmarkCount, lastUpdated, onRefresh, da
       <div className="header-content">
         <div className="header-brand">
           <h1>
-            <span className="header-flag">🍁</span>
-            Canada News Hub
+            <img src="/favicon.png" alt="Maple" className="header-logo" />
+            Maple
           </h1>
           <p className="header-subtitle">Latest news from Canadian sources</p>
         </div>
