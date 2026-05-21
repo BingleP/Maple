@@ -247,6 +247,29 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const activeSources = CANADIAN_SOURCES.filter(s => selectedSources.includes(s.name));
+    if (activeSources.length === 0) {
+      setArticles([]);
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = activeSources.map(s => s.name).sort().join(',');
+    const cached = feedCacheRef.current.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      setArticles(cached.articles);
+      setSourceErrors(cached.errors);
+      setSourceHealth(cached.sourceHealth);
+      setLastUpdated(new Date(cached.timestamp));
+      setLoading(false);
+    } else {
+      loadNews();
+    }
+  }, [selectedSources]);
+
+  useEffect(() => {
     if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     if (autoRefreshEnabled) {
       autoRefreshRef.current = setInterval(() => loadNews(true), AUTO_REFRESH_INTERVAL);
