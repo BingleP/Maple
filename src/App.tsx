@@ -278,10 +278,37 @@ function App() {
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
-      requestIdRef.current++;
-      loadNews();
+      // Fetch in background without blocking UI
+      const currentRequestId = ++requestIdRef.current;
+      const hasArticles = articlesRef.current.length > 0;
+      if (!hasArticles || isFirstLoadRef.current) setLoading(true);
+
+      fetchAllFeeds(activeSources, (updatedArticles) => {
+        if (requestIdRef.current === currentRequestId) setArticles(updatedArticles);
+      }).then((result) => {
+        if (requestIdRef.current !== currentRequestId) return;
+        feedCacheRef.current.set(cacheKey, {
+          articles: result.articles,
+          errors: result.errors,
+          sourceHealth: result.sourceHealth,
+          timestamp: now,
+        });
+        setArticles(result.articles);
+        setSourceErrors(result.errors);
+        setSourceHealth(result.sourceHealth);
+        setLastUpdated(new Date());
+        if (isFirstLoadRef.current) isFirstLoadRef.current = false;
+        else if (!hasArticles) addToast('News refreshed', 'success');
+      }).catch((err) => {
+        if (requestIdRef.current !== currentRequestId) return;
+        setSourceErrors([{ sourceName: 'All', error: 'Failed to load news. Please check your connection.' }]);
+        addToast('Failed to refresh news', 'error');
+        console.error(err);
+      }).finally(() => {
+        if (requestIdRef.current === currentRequestId) setLoading(false);
+      });
     }
-  }, [selectedSources]);
+  }, [selectedSources, addToast]);
 
   useEffect(() => {
     if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
