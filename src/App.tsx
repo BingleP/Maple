@@ -211,11 +211,11 @@ function App() {
       return;
     }
 
-    // Only show loading skeleton on first load or when no cache exists
-    if (!cached || isFirstLoadRef.current) {
+    // Don't show loading if we have cached data to display
+    const hasCachedData = cached && cached.articles.length > 0;
+    if (!hasCachedData || isFirstLoadRef.current) {
       setLoading(true);
     }
-    setSourceErrors([]);
 
     try {
       const result = await fetchAllFeeds(activeSources, (updatedArticles) => {
@@ -236,7 +236,7 @@ function App() {
 
       if (isFirstLoadRef.current) {
         isFirstLoadRef.current = false;
-      } else {
+      } else if (!hasCachedData) {
         addToast('News refreshed', 'success');
       }
     } catch (err) {
@@ -267,15 +267,46 @@ function App() {
     const now = Date.now();
 
     if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      // Use cached data immediately - no flicker
       setArticles(cached.articles);
       setSourceErrors(cached.errors);
       setSourceHealth(cached.sourceHealth);
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
-      loadNewsRef.current(false, selectedSources);
+      // Fetch in background without clearing current articles or showing loading
+      // Only show loading on very first load
+      if (isFirstLoadRef.current) {
+        setLoading(true);
+      }
+      
+      fetchAllFeeds(activeSources, (updatedArticles) => {
+        setArticles(updatedArticles);
+      }).then((result) => {
+        feedCacheRef.current.set(cacheKey, {
+          articles: result.articles,
+          errors: result.errors,
+          sourceHealth: result.sourceHealth,
+          timestamp: now,
+        });
+        setArticles(result.articles);
+        setSourceErrors(result.errors);
+        setSourceHealth(result.sourceHealth);
+        setLastUpdated(new Date());
+        if (isFirstLoadRef.current) {
+          isFirstLoadRef.current = false;
+        } else {
+          addToast('News refreshed', 'success');
+        }
+      }).catch((err) => {
+        setSourceErrors([{ sourceName: 'All', error: 'Failed to load news. Please check your connection.' }]);
+        addToast('Failed to refresh news', 'error');
+        console.error(err);
+      }).finally(() => {
+        setLoading(false);
+      });
     }
-  }, [selectedSources]);
+  }, [selectedSources, addToast]);
 
   useEffect(() => {
     if (autoRefreshRef.current) {
