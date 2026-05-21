@@ -24,38 +24,28 @@ interface NewsListProps {
 export function NewsList({ articles, loading, sourceErrors, bookmarkedUrls, readUrls, onToggleBookmark, onMarkRead, onPreview, onShare, onSpeak, groupBySource, showBookmarkedOnly, viewMode }: NewsListProps) {
   const [visibleCount, setVisibleCount] = useState(INFINITE_SCROLL_INCREMENT);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const articlesLengthRef = useRef(articles.length);
 
   useEffect(() => {
-    articlesLengthRef.current = articles.length;
     setVisibleCount(INFINITE_SCROLL_INCREMENT);
-  }, [articles]);
-
-  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-    if (entries[0].isIntersecting) {
-      setVisibleCount(prev => {
-        const currentLength = articlesLengthRef.current;
-        if (prev >= currentLength) return prev;
-        return Math.min(prev + INFINITE_SCROLL_INCREMENT, currentLength);
-      });
-    }
-  }, []);
+  }, [articles.length]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(handleObserver, {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && visibleCount < articles.length) {
+        setVisibleCount(prev => Math.min(prev + INFINITE_SCROLL_INCREMENT, articles.length));
+      }
+    }, {
       root: null,
       rootMargin: '400px',
       threshold: 0,
     });
 
-    const current = sentinelRef.current;
-    if (current) observer.observe(current);
-
-    return () => {
-      if (current) observer.unobserve(current);
-      observer.disconnect();
-    };
-  }, [handleObserver]);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, articles.length]);
 
   if (loading) {
     return (
