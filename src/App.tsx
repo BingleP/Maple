@@ -104,10 +104,14 @@ function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const loadNewsRef = useRef<() => void>(() => {});
   const isFirstLoadRef = useRef(true);
   const feedCacheRef = useRef<Map<string, { articles: Article[]; errors: SourceError[]; sourceHealth: SourceHealth[]; timestamp: number }>>(new Map());
   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const selectedSourcesRef = useRef(selectedSources);
+
+  useEffect(() => {
+    selectedSourcesRef.current = selectedSources;
+  }, [selectedSources]);
 
   const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
@@ -160,7 +164,7 @@ function App() {
         searchInput?.focus();
       } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        loadNewsRef.current(selectedSources);
+        loadNews(true);
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setDarkMode(prev => !prev);
@@ -183,7 +187,7 @@ function App() {
   }, [previewArticle]);
 
   const loadNews = useCallback(async (forceRefresh = false, sourcesOverride?: string[]) => {
-    const sourcesToUse = sourcesOverride || selectedSources;
+    const sourcesToUse = sourcesOverride || selectedSourcesRef.current;
     const activeSources = CANADIAN_SOURCES.filter(s =>
       sourcesToUse.includes(s.name)
     );
@@ -242,7 +246,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSources, addToast]);
+  }, [addToast]);
 
   useEffect(() => {
     loadNewsRef.current = (sources?: string[]) => loadNews(false, sources);
@@ -267,10 +271,9 @@ function App() {
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
-      // Pass current selectedSources to avoid stale closure
-      loadNewsRef.current(selectedSources);
+      loadNews(false, selectedSources);
     }
-  }, [selectedSources]);
+  }, [selectedSources, loadNews]);
 
   useEffect(() => {
     if (autoRefreshRef.current) {
@@ -279,7 +282,7 @@ function App() {
 
     if (autoRefreshEnabled) {
       autoRefreshRef.current = setInterval(() => {
-        loadNewsRef.current(selectedSources);
+        loadNews(true);
       }, AUTO_REFRESH_INTERVAL);
     }
 
@@ -288,7 +291,7 @@ function App() {
         clearInterval(autoRefreshRef.current);
       }
     };
-  }, [autoRefreshEnabled, selectedSources]);
+  }, [autoRefreshEnabled, loadNews]);
 
   const handleToggleSource = (sourceName: string) => {
     setSelectedSources(prev =>
@@ -307,7 +310,7 @@ function App() {
   };
 
   const handleRefresh = () => {
-    loadNewsRef.current(selectedSources);
+    loadNews(true);
   };
 
   const handleToggleDarkMode = () => {
