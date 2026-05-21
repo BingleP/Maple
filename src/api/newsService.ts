@@ -143,6 +143,12 @@ function extractImage(item: Element, description: string, content: string): stri
   const imgFromDescription = extractImageFromContent(description);
   if (imgFromDescription) return imgFromDescription;
 
+  const allImages = item.querySelectorAll('img');
+  if (allImages.length > 0) {
+    const firstImg = allImages[0].getAttribute('src');
+    if (firstImg) return firstImg;
+  }
+
   return undefined;
 }
 
