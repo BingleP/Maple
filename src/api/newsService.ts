@@ -267,6 +267,9 @@ function extractImageFromPage(html: string): string | undefined {
   const postmediaCdn = html.match(/https:\/\/smartcdn\.gprod\.postmedia\.digital\/nationalpost\/wp-content\/uploads\/[^"'\s]+/);
   if (postmediaCdn) return postmediaCdn[0];
 
+  const ctvResizer = html.match(/https:\/\/www\.ctvnews\.ca\/resizer\/v2\/[^"'\s]+/);
+  if (ctvResizer) return ctvResizer[0];
+
   const firstLargeImg = html.match(/<img[^>]+src=["']([^"'>]+\.(?:jpg|jpeg|png|webp))["'][^>]*(?:width=["']\d{3,}["']|class=["'][^"']*large[^"']*["'])/i);
   if (firstLargeImg) return firstLargeImg[1];
 
