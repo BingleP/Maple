@@ -183,33 +183,36 @@ function App() {
   }, [previewArticle]);
 
   const loadNews = useCallback(async (forceRefresh = false) => {
-    setLoading(true);
+    const activeSources = CANADIAN_SOURCES.filter(s =>
+      selectedSources.includes(s.name)
+    );
+
+    if (activeSources.length === 0) {
+      setArticles([]);
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = activeSources.map(s => s.name).sort().join(',');
+    const cached = feedCacheRef.current.get(cacheKey);
+    const now = Date.now();
+
+    if (!forceRefresh && cached && (now - cached.timestamp) < CACHE_TTL) {
+      setArticles(cached.articles);
+      setSourceErrors(cached.errors);
+      setSourceHealth(cached.sourceHealth);
+      setLastUpdated(new Date(cached.timestamp));
+      setLoading(false);
+      return;
+    }
+
+    // Only show loading skeleton on first load or when no cache exists
+    if (!cached || isFirstLoadRef.current) {
+      setLoading(true);
+    }
     setSourceErrors([]);
 
     try {
-      const activeSources = CANADIAN_SOURCES.filter(s =>
-        selectedSources.includes(s.name)
-      );
-
-      if (activeSources.length === 0) {
-        setArticles([]);
-        setLoading(false);
-        return;
-      }
-
-      const cacheKey = activeSources.map(s => s.name).sort().join(',');
-      const cached = feedCacheRef.current.get(cacheKey);
-      const now = Date.now();
-
-      if (!forceRefresh && cached && (now - cached.timestamp) < CACHE_TTL) {
-        setArticles(cached.articles);
-        setSourceErrors(cached.errors);
-        setSourceHealth(cached.sourceHealth);
-        setLastUpdated(new Date(cached.timestamp));
-        setLoading(false);
-        return;
-      }
-
       const result = await fetchAllFeeds(activeSources, (updatedArticles) => {
         setArticles(updatedArticles);
       });
