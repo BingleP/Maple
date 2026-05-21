@@ -160,7 +160,7 @@ function App() {
         searchInput?.focus();
       } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        loadNewsRef.current();
+        loadNewsRef.current(selectedSources);
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setDarkMode(prev => !prev);
@@ -182,9 +182,10 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [previewArticle]);
 
-  const loadNews = useCallback(async (forceRefresh = false) => {
+  const loadNews = useCallback(async (forceRefresh = false, sourcesOverride?: string[]) => {
+    const sourcesToUse = sourcesOverride || selectedSources;
     const activeSources = CANADIAN_SOURCES.filter(s =>
-      selectedSources.includes(s.name)
+      sourcesToUse.includes(s.name)
     );
 
     if (activeSources.length === 0) {
@@ -244,7 +245,7 @@ function App() {
   }, [selectedSources, addToast]);
 
   useEffect(() => {
-    loadNewsRef.current = () => loadNews();
+    loadNewsRef.current = (sources?: string[]) => loadNews(false, sources);
   }, [loadNews]);
 
   useEffect(() => {
@@ -266,7 +267,8 @@ function App() {
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
-      loadNewsRef.current();
+      // Pass current selectedSources to avoid stale closure
+      loadNewsRef.current(selectedSources);
     }
   }, [selectedSources]);
 
@@ -277,7 +279,7 @@ function App() {
 
     if (autoRefreshEnabled) {
       autoRefreshRef.current = setInterval(() => {
-        loadNewsRef.current();
+        loadNewsRef.current(selectedSources);
       }, AUTO_REFRESH_INTERVAL);
     }
 
@@ -286,7 +288,7 @@ function App() {
         clearInterval(autoRefreshRef.current);
       }
     };
-  }, [autoRefreshEnabled]);
+  }, [autoRefreshEnabled, selectedSources]);
 
   const handleToggleSource = (sourceName: string) => {
     setSelectedSources(prev =>
@@ -305,7 +307,7 @@ function App() {
   };
 
   const handleRefresh = () => {
-    loadNews();
+    loadNewsRef.current(selectedSources);
   };
 
   const handleToggleDarkMode = () => {
