@@ -106,6 +106,8 @@ function App() {
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadNewsRef = useRef<() => void>(() => {});
   const isFirstLoadRef = useRef(true);
+  const feedCacheRef = useRef<Map<string, { articles: Article[]; errors: SourceError[]; sourceHealth: SourceHealth[]; timestamp: number }>>(new Map());
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
@@ -180,7 +182,7 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [previewArticle]);
 
-  const loadNews = useCallback(async () => {
+  const loadNews = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setSourceErrors([]);
 
@@ -195,7 +197,28 @@ function App() {
         return;
       }
 
+      const cacheKey = activeSources.map(s => s.name).sort().join(',');
+      const cached = feedCacheRef.current.get(cacheKey);
+      const now = Date.now();
+
+      if (!forceRefresh && cached && (now - cached.timestamp) < CACHE_TTL) {
+        setArticles(cached.articles);
+        setSourceErrors(cached.errors);
+        setSourceHealth(cached.sourceHealth);
+        setLastUpdated(new Date(cached.timestamp));
+        setLoading(false);
+        return;
+      }
+
       const result = await fetchAllFeeds(activeSources);
+      
+      feedCacheRef.current.set(cacheKey, {
+        articles: result.articles,
+        errors: result.errors,
+        sourceHealth: result.sourceHealth,
+        timestamp: now,
+      });
+
       setArticles(result.articles);
       setSourceErrors(result.errors);
       setSourceHealth(result.sourceHealth);
@@ -220,8 +243,27 @@ function App() {
   }, [loadNews]);
 
   useEffect(() => {
-    loadNews();
-  }, [loadNews]);
+    const activeSources = CANADIAN_SOURCES.filter(s => selectedSources.includes(s.name));
+    if (activeSources.length === 0) {
+      setArticles([]);
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = activeSources.map(s => s.name).sort().join(',');
+    const cached = feedCacheRef.current.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      setArticles(cached.articles);
+      setSourceErrors(cached.errors);
+      setSourceHealth(cached.sourceHealth);
+      setLastUpdated(new Date(cached.timestamp));
+      setLoading(false);
+    } else {
+      loadNews();
+    }
+  }, [loadNews, selectedSources]);
 
   useEffect(() => {
     if (autoRefreshRef.current) {
@@ -242,11 +284,32 @@ function App() {
   }, [autoRefreshEnabled]);
 
   const handleToggleSource = (sourceName: string) => {
-    setSelectedSources(prev =>
-      prev.includes(sourceName)
+    setSelectedSources(prev => {
+      const next = prev.includes(sourceName)
         ? prev.filter(s => s !== sourceName)
-        : [...prev, sourceName]
-    );
+        : [...prev, sourceName];
+      
+      // Check cache for new source combination
+      const activeSources = CANADIAN_SOURCES.filter(s => next.includes(s.name));
+      if (activeSources.length > 0) {
+        const cacheKey = activeSources.map(s => s.name).sort().join(',');
+        const cached = feedCacheRef.current.get(cacheKey);
+        const now = Date.now();
+        
+        if (cached && (now - cached.timestamp) < CACHE_TTL) {
+          setArticles(cached.articles);
+          setSourceErrors(cached.errors);
+          setSourceHealth(cached.sourceHealth);
+          setLastUpdated(new Date(cached.timestamp));
+          setLoading(false);
+        }
+      } else {
+        setArticles([]);
+        setLoading(false);
+      }
+      
+      return next;
+    });
   };
 
   const handleSelectAll = () => {
