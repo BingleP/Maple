@@ -20,6 +20,14 @@ const STORAGE_KEY_READ = 'canada-news-read';
 const STORAGE_KEY_VIEW_MODE = 'canada-news-view-mode';
 const STORAGE_KEY_FONT_SIZE = 'canada-news-font-size';
 const AUTO_REFRESH_INTERVAL = 10 * 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000;
+
+interface CacheEntry {
+  articles: Article[];
+  errors: SourceError[];
+  sourceHealth: SourceHealth[];
+  timestamp: number;
+}
 
 function getInitialSources(): string[] {
   try {
@@ -103,15 +111,17 @@ function App() {
   const [showStats, setShowStats] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
+
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFirstLoadRef = useRef(true);
-  const feedCacheRef = useRef<Map<string, { articles: Article[]; errors: SourceError[]; sourceHealth: SourceHealth[]; timestamp: number }>>(new Map());
-  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const feedCacheRef = useRef<Map<string, CacheEntry>>(new Map());
   const selectedSourcesRef = useRef(selectedSources);
+  const articlesRef = useRef(articles);
+  const loadingRef = useRef(loading);
 
-  useEffect(() => {
-    selectedSourcesRef.current = selectedSources;
-  }, [selectedSources]);
+  useEffect(() => { selectedSourcesRef.current = selectedSources; }, [selectedSources]);
+  useEffect(() => { articlesRef.current = articles; }, [articles]);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
 
   const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
@@ -154,17 +164,13 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
-        return;
-      }
-
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
       if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault();
-        const searchInput = document.querySelector('.search-bar input') as HTMLInputElement;
-        searchInput?.focus();
+        document.querySelector('.search-bar input')?.focus();
       } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        loadNewsRef.current(true);
+        loadNews(true);
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setDarkMode(prev => !prev);
@@ -172,25 +178,17 @@ function App() {
         e.preventDefault();
         setShowBookmarkedOnly(prev => !prev);
       } else if (e.key === 'Escape') {
-        if (previewArticle) {
-          setPreviewArticle(null);
-        } else {
-          setSearchQuery('');
-          setShowBookmarkedOnly(false);
-          setSidebarOpen(false);
-        }
+        if (previewArticle) setPreviewArticle(null);
+        else { setSearchQuery(''); setShowBookmarkedOnly(false); setSidebarOpen(false); }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [previewArticle]);
 
-  const loadNews = useCallback(async (forceRefresh = false, sourcesOverride?: string[]) => {
-    const sourcesToUse = sourcesOverride || selectedSourcesRef.current;
-    const activeSources = CANADIAN_SOURCES.filter(s =>
-      sourcesToUse.includes(s.name)
-    );
+  const loadNews = useCallback(async (forceRefresh = false) => {
+    const sourcesToUse = selectedSourcesRef.current;
+    const activeSources = CANADIAN_SOURCES.filter(s => sourcesToUse.includes(s.name));
 
     if (activeSources.length === 0) {
       setArticles([]);
@@ -211,9 +209,8 @@ function App() {
       return;
     }
 
-    // Don't show loading if we have cached data to display
-    const hasCachedData = cached && cached.articles.length > 0;
-    if (!hasCachedData || isFirstLoadRef.current) {
+    const hasArticles = articlesRef.current.length > 0;
+    if (!hasArticles || isFirstLoadRef.current) {
       setLoading(true);
     }
 
@@ -221,7 +218,7 @@ function App() {
       const result = await fetchAllFeeds(activeSources, (updatedArticles) => {
         setArticles(updatedArticles);
       });
-      
+
       feedCacheRef.current.set(cacheKey, {
         articles: result.articles,
         errors: result.errors,
@@ -234,11 +231,8 @@ function App() {
       setSourceHealth(result.sourceHealth);
       setLastUpdated(new Date());
 
-      if (isFirstLoadRef.current) {
-        isFirstLoadRef.current = false;
-      } else if (!hasCachedData) {
-        addToast('News refreshed', 'success');
-      }
+      if (isFirstLoadRef.current) isFirstLoadRef.current = false;
+      else if (!hasArticles) addToast('News refreshed', 'success');
     } catch (err) {
       setSourceErrors([{ sourceName: 'All', error: 'Failed to load news. Please check your connection.' }]);
       addToast('Failed to refresh news', 'error');
@@ -248,116 +242,33 @@ function App() {
     }
   }, [addToast]);
 
-  const loadNewsRef = useRef<(forceRefresh?: boolean, sourcesOverride?: string[]) => Promise<void>>(() => Promise.resolve());
+  useEffect(() => {
+    loadNews();
+  }, []);
 
   useEffect(() => {
-    loadNewsRef.current = loadNews;
-  }, [loadNews]);
-
-  useEffect(() => {
-    const activeSources = CANADIAN_SOURCES.filter(s => selectedSources.includes(s.name));
-    if (activeSources.length === 0) {
-      setArticles([]);
-      setLoading(false);
-      return;
-    }
-
-    const cacheKey = activeSources.map(s => s.name).sort().join(',');
-    const cached = feedCacheRef.current.get(cacheKey);
-    const now = Date.now();
-
-    if (cached && (now - cached.timestamp) < CACHE_TTL) {
-      // Use cached data immediately - no flicker
-      setArticles(cached.articles);
-      setSourceErrors(cached.errors);
-      setSourceHealth(cached.sourceHealth);
-      setLastUpdated(new Date(cached.timestamp));
-      setLoading(false);
-    } else {
-      // Fetch in background without clearing current articles or showing loading
-      // Only show loading on very first load
-      if (isFirstLoadRef.current) {
-        setLoading(true);
-      }
-      
-      fetchAllFeeds(activeSources, (updatedArticles) => {
-        setArticles(updatedArticles);
-      }).then((result) => {
-        feedCacheRef.current.set(cacheKey, {
-          articles: result.articles,
-          errors: result.errors,
-          sourceHealth: result.sourceHealth,
-          timestamp: now,
-        });
-        setArticles(result.articles);
-        setSourceErrors(result.errors);
-        setSourceHealth(result.sourceHealth);
-        setLastUpdated(new Date());
-        if (isFirstLoadRef.current) {
-          isFirstLoadRef.current = false;
-        } else {
-          addToast('News refreshed', 'success');
-        }
-      }).catch((err) => {
-        setSourceErrors([{ sourceName: 'All', error: 'Failed to load news. Please check your connection.' }]);
-        addToast('Failed to refresh news', 'error');
-        console.error(err);
-      }).finally(() => {
-        setLoading(false);
-      });
-    }
-  }, [selectedSources, addToast]);
-
-  useEffect(() => {
-    if (autoRefreshRef.current) {
-      clearInterval(autoRefreshRef.current);
-    }
-
+    if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     if (autoRefreshEnabled) {
-      autoRefreshRef.current = setInterval(() => {
-        loadNewsRef.current(true);
-      }, AUTO_REFRESH_INTERVAL);
+      autoRefreshRef.current = setInterval(() => loadNews(true), AUTO_REFRESH_INTERVAL);
     }
-
-    return () => {
-      if (autoRefreshRef.current) {
-        clearInterval(autoRefreshRef.current);
-      }
-    };
-  }, [autoRefreshEnabled]);
+    return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
+  }, [autoRefreshEnabled, loadNews]);
 
   const handleToggleSource = (sourceName: string) => {
     setSelectedSources(prev =>
-      prev.includes(sourceName)
-        ? prev.filter(s => s !== sourceName)
-        : [...prev, sourceName]
+      prev.includes(sourceName) ? prev.filter(s => s !== sourceName) : [...prev, sourceName]
     );
   };
 
-  const handleSelectAll = () => {
-    setSelectedSources(CANADIAN_SOURCES.map(s => s.name));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedSources([]);
-  };
-
-  const handleRefresh = () => {
-    loadNewsRef.current(true);
-  };
-
-  const handleToggleDarkMode = () => {
-    setDarkMode(prev => !prev);
-  };
-
+  const handleSelectAll = () => setSelectedSources(CANADIAN_SOURCES.map(s => s.name));
+  const handleDeselectAll = () => setSelectedSources([]);
+  const handleRefresh = () => loadNews(true);
+  const handleToggleDarkMode = () => setDarkMode(prev => !prev);
   const handleToggleAutoRefresh = () => {
     setAutoRefreshEnabled(prev => !prev);
     addToast(autoRefreshEnabled ? 'Auto-refresh disabled' : 'Auto-refresh enabled (10 min)', 'info');
   };
-
-  const handleToggleBookmarks = () => {
-    setShowBookmarkedOnly(prev => !prev);
-  };
+  const handleToggleBookmarks = () => setShowBookmarkedOnly(prev => !prev);
 
   const handleClearHistory = () => {
     setBookmarkedUrls(new Set());
@@ -421,41 +332,23 @@ function App() {
   };
 
   const handleMarkRead = (url: string) => {
-    setReadUrls(prev => {
-      const next = new Set(prev);
-      next.add(url);
-      return next;
-    });
+    setReadUrls(prev => { const next = new Set(prev); next.add(url); return next; });
   };
 
-  const handlePreview = (article: Article) => {
-    setPreviewArticle(article);
-  };
+  const handlePreview = (article: Article) => setPreviewArticle(article);
 
   const handleShare = async (article: Article) => {
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: article.title,
-          url: article.url,
-        });
-        return;
-      } catch {}
+      try { await navigator.share({ title: article.title, url: article.url }); return; } catch {}
     }
-
     try {
       await navigator.clipboard.writeText(article.url);
       addToast('Link copied to clipboard', 'success');
-    } catch {
-      addToast('Failed to copy link', 'error');
-    }
+    } catch { addToast('Failed to copy link', 'error'); }
   };
 
   const handleSpeakArticle = (article: Article) => {
-    if (!('speechSynthesis' in window)) {
-      addToast('Text-to-speech not supported', 'error');
-      return;
-    }
+    if (!('speechSynthesis' in window)) { addToast('Text-to-speech not supported', 'error'); return; }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(`${article.title}. ${article.description}`);
     utterance.lang = 'en-CA';
@@ -465,63 +358,38 @@ function App() {
   };
 
   const allCategories = useMemo(() =>
-    [...new Set(articles.map(a => a.category || 'Uncategorized'))].sort(),
-    [articles]
+    [...new Set(articles.map(a => a.category || 'Uncategorized'))].sort(), [articles]
   );
 
   const sortedArticles = useMemo(() => {
     if (sortBy === 'newest') return articles;
     const sorted = [...articles];
-    if (sortBy === 'oldest') {
-      sorted.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
-    } else {
-      sorted.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
-    }
+    if (sortBy === 'oldest') sorted.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
+    else sorted.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
     return sorted;
   }, [articles, sortBy]);
 
   const filteredArticles = useMemo(() => {
     let result = sortedArticles;
-    if (selectedCategory !== 'all') {
-      result = result.filter(a => (a.category || 'Uncategorized') === selectedCategory);
-    }
-    if (showBookmarkedOnly) {
-      result = result.filter(a => bookmarkedUrls.has(a.url));
-    }
+    if (selectedCategory !== 'all') result = result.filter(a => (a.category || 'Uncategorized') === selectedCategory);
+    if (showBookmarkedOnly) result = result.filter(a => bookmarkedUrls.has(a.url));
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(article =>
-        article.title.toLowerCase().includes(q) ||
-        article.sourceName.toLowerCase().includes(q) ||
-        article.description.toLowerCase().includes(q)
-      );
+      result = result.filter(a => a.title.toLowerCase().includes(q) || a.sourceName.toLowerCase().includes(q) || a.description.toLowerCase().includes(q));
     }
     return result;
   }, [sortedArticles, selectedCategory, showBookmarkedOnly, bookmarkedUrls, searchQuery]);
 
-  const topKeywords = useMemo(() =>
-    extractKeywords(filteredArticles, 25),
-    [filteredArticles]
-  );
+  const topKeywords = useMemo(() => extractKeywords(filteredArticles, 25), [filteredArticles]);
 
   const sourceStats = useMemo(() => {
     const stats = new Map<string, number>();
-    for (const article of articles) {
-      stats.set(article.sourceName, (stats.get(article.sourceName) || 0) + 1);
-    }
-    return [...stats.entries()]
-      .map(([source, count]) => ({ source, count }))
-      .sort((a, b) => b.count - a.count);
+    for (const article of articles) stats.set(article.sourceName, (stats.get(article.sourceName) || 0) + 1);
+    return [...stats.entries()].map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count);
   }, [articles]);
 
-  const handleKeywordClick = (keyword: string) => {
-    setSearchQuery(keyword);
-  };
-
-  const handleToggleViewMode = () => {
-    setViewMode(prev => prev === 'card' ? 'compact' : 'card');
-  };
-
+  const handleKeywordClick = (keyword: string) => setSearchQuery(keyword);
+  const handleToggleViewMode = () => setViewMode(prev => prev === 'card' ? 'compact' : 'card');
   const handleIncreaseFont = () => setFontSize(prev => Math.min(24, prev + 1));
   const handleDecreaseFont = () => setFontSize(prev => Math.max(12, prev - 1));
 
@@ -545,16 +413,10 @@ function App() {
           onImportBookmarks={handleImportBookmarks}
         />
 
-      <div className="app-layout">
-        {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true"></div>}
-        <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`} aria-label="Source filter sidebar">
-            <button
-              className="sidebar-close"
-              onClick={() => setSidebarOpen(false)}
-              aria-label="Close sidebar"
-            >
-              &times;
-            </button>
+        <div className="app-layout">
+          {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true"></div>}
+          <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`} aria-label="Source filter sidebar">
+            <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">&times;</button>
             <SourceFilter
               sources={CANADIAN_SOURCES}
               selectedSources={selectedSources}
@@ -568,11 +430,7 @@ function App() {
 
           <main className="main-content" id="main-content">
             <div className="toolbar">
-              <button
-                className="sidebar-toggle"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                aria-label="Toggle source sidebar"
-              >
+              <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle source sidebar">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="3" y1="12" x2="21" y2="12"></line>
                   <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -586,66 +444,30 @@ function App() {
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input
-                  type="text"
-                  placeholder="Search articles... (/)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Search articles"
-                />
-                {searchQuery && (
-                  <button className="search-clear" onClick={() => setSearchQuery('')} title="Clear search" aria-label="Clear search">
-                    &times;
-                  </button>
-                )}
+                <input type="text" placeholder="Search articles... (/)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} aria-label="Search articles" />
+                {searchQuery && <button className="search-clear" onClick={() => setSearchQuery('')} title="Clear search" aria-label="Clear search">&times;</button>}
               </div>
 
               <div className="toolbar-right">
                 <div className="category-filter">
                   <label htmlFor="category">Category:</label>
-                  <select
-                    id="category"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
+                  <select id="category" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                     <option value="all">All</option>
-                    {allCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                    {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
-                <button
-                  className={`toolbar-toggle ${viewMode === 'compact' ? 'active' : ''}`}
-                  onClick={handleToggleViewMode}
-                  title={viewMode === 'card' ? 'Switch to compact view' : 'Switch to card view'}
-                >
+                <button className={`toolbar-toggle ${viewMode === 'compact' ? 'active' : ''}`} onClick={handleToggleViewMode} title={viewMode === 'card' ? 'Switch to compact view' : 'Switch to card view'}>
                   {viewMode === 'card' ? 'Compact' : 'Cards'}
                 </button>
-                <button
-                  className={`toolbar-toggle ${groupBySource ? 'active' : ''}`}
-                  onClick={() => setGroupBySource(prev => !prev)}
-                  title="Group by source"
-                >
-                  Group by source
-                </button>
-                <button
-                  className={`toolbar-toggle ${showStats ? 'active' : ''}`}
-                  onClick={() => setShowStats(prev => !prev)}
-                  title="Show feed statistics"
-                >
-                  Stats
-                </button>
+                <button className={`toolbar-toggle ${groupBySource ? 'active' : ''}`} onClick={() => setGroupBySource(prev => !prev)} title="Group by source">Group by source</button>
+                <button className={`toolbar-toggle ${showStats ? 'active' : ''}`} onClick={() => setShowStats(prev => !prev)} title="Show feed statistics">Stats</button>
                 <div className="font-size-controls">
                   <button className="font-btn" onClick={handleDecreaseFont} title="Decrease font size" aria-label="Decrease font size">A-</button>
                   <button className="font-btn" onClick={handleIncreaseFont} title="Increase font size" aria-label="Increase font size">A+</button>
                 </div>
                 <div className="sort-controls">
                   <label htmlFor="sort">Sort:</label>
-                  <select
-                    id="sort"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  >
+                  <select id="sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
                     <option value="newest">Newest</option>
                     <option value="oldest">Oldest</option>
                     <option value="source">Source</option>
@@ -654,20 +476,14 @@ function App() {
               </div>
             </div>
 
-            {searchQuery && (
-              <div className="search-results-info">
-                {filteredArticles.length} result{filteredArticles.length !== 1 ? 's' : ''} for "{searchQuery}"
-              </div>
-            )}
-
+            {searchQuery && <div className="search-results-info">{filteredArticles.length} result{filteredArticles.length !== 1 ? 's' : ''} for "{searchQuery}"</div>}
             {showStats && <FeedStats sourceStats={sourceStats} totalArticles={articles.length} sourceHealth={sourceHealth} />}
-
             <TopKeywords keywords={topKeywords} onKeywordClick={handleKeywordClick} />
 
-          <NewsList
-            articles={filteredArticles}
-            loading={loading}
-            sourceErrors={sourceErrors}
+            <NewsList
+              articles={filteredArticles}
+              loading={loading}
+              sourceErrors={sourceErrors}
               bookmarkedUrls={bookmarkedUrls}
               readUrls={readUrls}
               onToggleBookmark={handleToggleBookmark}
@@ -685,10 +501,7 @@ function App() {
         <ArticlePreviewModal
           article={previewArticle}
           onClose={() => setPreviewArticle(null)}
-          onOpenFull={(article) => {
-            handleMarkRead(article.url);
-            setPreviewArticle(null);
-          }}
+          onOpenFull={(article) => { handleMarkRead(article.url); setPreviewArticle(null); }}
         />
 
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
