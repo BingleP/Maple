@@ -270,8 +270,17 @@ function extractImageFromPage(html: string): string | undefined {
   const ctvResizer = html.match(/https:\/\/www\.ctvnews\.ca\/resizer\/v2\/[^"'\s]+/);
   if (ctvResizer) return ctvResizer[0];
 
+  const heroImage = html.match(/<img[^>]+class=["'][^"']*(?:hero|featured|main|lead|header|article-image)[^"']*["'][^>]+src=["']([^"']+)["']/i);
+  if (heroImage) return heroImage[1];
+
+  const heroImageAlt = html.match(/<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*(?:hero|featured|main|lead|header|article-image)[^"']*["']/i);
+  if (heroImageAlt) return heroImageAlt[1];
+
   const firstLargeImg = html.match(/<img[^>]+src=["']([^"'>]+\.(?:jpg|jpeg|png|webp))["'][^>]*(?:width=["']\d{3,}["']|class=["'][^"']*large[^"']*["'])/i);
   if (firstLargeImg) return firstLargeImg[1];
+
+  const anyImg = html.match(/<img[^>]+src=["']([^"'>]+\.(?:jpg|jpeg|png|webp))["']/i);
+  if (anyImg) return anyImg[1];
 
   return undefined;
 }
