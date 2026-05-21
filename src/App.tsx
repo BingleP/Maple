@@ -286,32 +286,11 @@ function App() {
   }, [autoRefreshEnabled]);
 
   const handleToggleSource = (sourceName: string) => {
-    setSelectedSources(prev => {
-      const next = prev.includes(sourceName)
+    setSelectedSources(prev =>
+      prev.includes(sourceName)
         ? prev.filter(s => s !== sourceName)
-        : [...prev, sourceName];
-      
-      // Check cache for new source combination
-      const activeSources = CANADIAN_SOURCES.filter(s => next.includes(s.name));
-      if (activeSources.length > 0) {
-        const cacheKey = activeSources.map(s => s.name).sort().join(',');
-        const cached = feedCacheRef.current.get(cacheKey);
-        const now = Date.now();
-        
-        if (cached && (now - cached.timestamp) < CACHE_TTL) {
-          setArticles(cached.articles);
-          setSourceErrors(cached.errors);
-          setSourceHealth(cached.sourceHealth);
-          setLastUpdated(new Date(cached.timestamp));
-          setLoading(false);
-        }
-      } else {
-        setArticles([]);
-        setLoading(false);
-      }
-      
-      return next;
-    });
+        : [...prev, sourceName]
+    );
   };
 
   const handleSelectAll = () => {
