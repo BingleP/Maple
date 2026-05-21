@@ -173,7 +173,8 @@ const STOP_WORDS = new Set([
   'times', 'divided', 'comes', 'amid', 'three', 'facing', 'much', 'city',
   'national', 'members', 'province', 'local', 'used', 'country', 'family',
   'looking', 'governments', 'pressure', 'centres', 'world', 'provincial',
-  'federal', 'canadians', 'mark',
+  'federal', 'canadians', 'mark', 'person', 'grizzly', 'government',
+  'bear', 'authorities',
 ]);
 
 export interface KeywordInfo {
