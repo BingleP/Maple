@@ -171,7 +171,9 @@ const STOP_WORDS = new Set([
   'seriously', 'simply', 'slightly', 'slowly', 'suddenly', 'typically',
   'ultimately', 'usually', 'widely', 'despite', 'except', 'worth',
   'times', 'divided', 'comes', 'amid', 'three', 'facing', 'much', 'city',
-  'national', 'members', 'province',
+  'national', 'members', 'province', 'local', 'used', 'country', 'family',
+  'looking', 'governments', 'pressure', 'centres', 'world', 'provincial',
+  'federal', 'canadians', 'mark',
 ]);
 
 export interface KeywordInfo {
