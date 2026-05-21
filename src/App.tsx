@@ -118,6 +118,7 @@ function App() {
   const selectedSourcesRef = useRef(selectedSources);
   const articlesRef = useRef(articles);
   const loadingRef = useRef(loading);
+  const requestIdRef = useRef(0);
 
   useEffect(() => { selectedSourcesRef.current = selectedSources; }, [selectedSources]);
   useEffect(() => { articlesRef.current = articles; }, [articles]);
@@ -187,12 +188,15 @@ function App() {
   }, [previewArticle]);
 
   const loadNews = useCallback(async (forceRefresh = false) => {
+    const requestId = ++requestIdRef.current;
     const sourcesToUse = selectedSourcesRef.current;
     const activeSources = CANADIAN_SOURCES.filter(s => sourcesToUse.includes(s.name));
 
     if (activeSources.length === 0) {
-      setArticles([]);
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setArticles([]);
+        setLoading(false);
+      }
       return;
     }
 
@@ -201,11 +205,13 @@ function App() {
     const now = Date.now();
 
     if (!forceRefresh && cached && (now - cached.timestamp) < CACHE_TTL) {
-      setArticles(cached.articles);
-      setSourceErrors(cached.errors);
-      setSourceHealth(cached.sourceHealth);
-      setLastUpdated(new Date(cached.timestamp));
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setArticles(cached.articles);
+        setSourceErrors(cached.errors);
+        setSourceHealth(cached.sourceHealth);
+        setLastUpdated(new Date(cached.timestamp));
+        setLoading(false);
+      }
       return;
     }
 
@@ -216,8 +222,12 @@ function App() {
 
     try {
       const result = await fetchAllFeeds(activeSources, (updatedArticles) => {
-        setArticles(updatedArticles);
+        if (requestIdRef.current === requestId) {
+          setArticles(updatedArticles);
+        }
       });
+
+      if (requestIdRef.current !== requestId) return;
 
       feedCacheRef.current.set(cacheKey, {
         articles: result.articles,
@@ -234,11 +244,14 @@ function App() {
       if (isFirstLoadRef.current) isFirstLoadRef.current = false;
       else if (!hasArticles) addToast('News refreshed', 'success');
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setSourceErrors([{ sourceName: 'All', error: 'Failed to load news. Please check your connection.' }]);
       addToast('Failed to refresh news', 'error');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [addToast]);
 
@@ -265,6 +278,7 @@ function App() {
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
+      requestIdRef.current++;
       loadNews();
     }
   }, [selectedSources]);
