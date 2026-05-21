@@ -55,6 +55,84 @@ export const CANADIAN_SOURCES: NewsSource[] = [
     homepage: 'https://www.cbc.ca/news/business',
     category: 'Business',
   },
+  {
+    name: 'The Globe and Mail',
+    feedUrl: '/api/feed/https://www.theglobeandmail.com/arc/outboundfeeds/rss/',
+    homepage: 'https://www.theglobeandmail.com',
+    category: 'National',
+  },
+  {
+    name: "Maclean's",
+    feedUrl: '/api/feed/https://www.macleans.ca/feed/',
+    homepage: 'https://www.macleans.ca',
+    category: 'National',
+  },
+  {
+    name: 'iPolitics',
+    feedUrl: '/api/feed/https://www.ipolitics.ca/feed/',
+    homepage: 'https://www.ipolitics.ca',
+    category: 'Politics',
+  },
+  {
+    name: 'The Canadian Press',
+    feedUrl: '/api/feed/https://www.thecanadianpress.com/feed/',
+    homepage: 'https://www.thecanadianpress.com',
+    category: 'National',
+  },
+  {
+    name: 'Vancouver Sun',
+    feedUrl: '/api/feed/https://vancouversun.com/feed/',
+    homepage: 'https://vancouversun.com',
+    category: 'Regional',
+  },
+  {
+    name: 'Calgary Herald',
+    feedUrl: '/api/feed/https://calgaryherald.com/feed/',
+    homepage: 'https://calgaryherald.com',
+    category: 'Regional',
+  },
+  {
+    name: 'Ottawa Citizen',
+    feedUrl: '/api/feed/https://ottawacitizen.com/feed/',
+    homepage: 'https://ottawacitizen.com',
+    category: 'Regional',
+  },
+  {
+    name: 'Montreal Gazette',
+    feedUrl: '/api/feed/https://montrealgazette.com/feed/',
+    homepage: 'https://montrealgazette.com',
+    category: 'Regional',
+  },
+  {
+    name: 'BNN Bloomberg',
+    feedUrl: '/api/feed/https://www.bnnbloomberg.ca/arc/outboundfeeds/rss/',
+    homepage: 'https://www.bnnbloomberg.ca',
+    category: 'Business',
+  },
+  {
+    name: 'APTN News',
+    feedUrl: '/api/feed/https://www.aptnnews.ca/feed/',
+    homepage: 'https://www.aptnnews.ca',
+    category: 'Indigenous',
+  },
+  {
+    name: 'The Narwhal',
+    feedUrl: '/api/feed/https://thenarwhal.ca/feed/',
+    homepage: 'https://thenarwhal.ca',
+    category: 'Environment',
+  },
+  {
+    name: 'La Presse',
+    feedUrl: '/api/feed/https://www.lapresse.ca/actualites/rss.xml',
+    homepage: 'https://www.lapresse.ca',
+    category: 'National',
+  },
+  {
+    name: 'CityNews',
+    feedUrl: '/api/feed/https://www.citynews.ca/feed/',
+    homepage: 'https://www.citynews.ca',
+    category: 'National',
+  },
 ];
 
 async function fetchFeed(url: string): Promise<string> {
