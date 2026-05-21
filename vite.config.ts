@@ -31,6 +31,71 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/feed\/cbc/, ''),
       },
+      '/api/feed/globeandmail': {
+        target: 'https://www.theglobeandmail.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/globeandmail/, ''),
+      },
+      '/api/feed/macleans': {
+        target: 'https://www.macleans.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/macleans/, ''),
+      },
+      '/api/feed/ipolitics': {
+        target: 'https://www.ipolitics.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/ipolitics/, ''),
+      },
+      '/api/feed/canadianpress': {
+        target: 'https://www.thecanadianpress.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/canadianpress/, ''),
+      },
+      '/api/feed/vancouversun': {
+        target: 'https://vancouversun.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/vancouversun/, ''),
+      },
+      '/api/feed/calgaryherald': {
+        target: 'https://calgaryherald.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/calgaryherald/, ''),
+      },
+      '/api/feed/ottawacitizen': {
+        target: 'https://ottawacitizen.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/ottawacitizen/, ''),
+      },
+      '/api/feed/montrealgazette': {
+        target: 'https://montrealgazette.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/montrealgazette/, ''),
+      },
+      '/api/feed/bnnbloomberg': {
+        target: 'https://www.bnnbloomberg.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/bnnbloomberg/, ''),
+      },
+      '/api/feed/aptnnews': {
+        target: 'https://www.aptnnews.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/aptnnews/, ''),
+      },
+      '/api/feed/thenarwhal': {
+        target: 'https://thenarwhal.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/thenarwhal/, ''),
+      },
+      '/api/feed/lapresse': {
+        target: 'https://www.lapresse.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/lapresse/, ''),
+      },
+      '/api/feed/citynews': {
+        target: 'https://www.citynews.ca',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/feed\/citynews/, ''),
+      },
     },
   },
 });
