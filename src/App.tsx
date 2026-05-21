@@ -263,9 +263,9 @@ function App() {
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
-      loadNews();
+      loadNewsRef.current();
     }
-  }, [loadNews, selectedSources]);
+  }, [selectedSources]);
 
   useEffect(() => {
     if (autoRefreshRef.current) {
