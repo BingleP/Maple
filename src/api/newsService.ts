@@ -100,7 +100,9 @@ export const CANADIAN_SOURCES: NewsSource[] = [
 ];
 
 async function fetchFeed(url: string): Promise<string> {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'Maple-News-Hub/1.0' },
+  });
   if (!response.ok) {
     throw new Error(`Failed to fetch feed: ${response.statusText}`);
   }
@@ -322,7 +324,9 @@ async function fetchArticleImage(articleUrl: string): Promise<string | undefined
     const path = articleUrl.replace(/^https?:\/\/[^/]+/, '');
     const proxyUrl = `${proxyPrefix}${path}`;
 
-    const response = await fetch(proxyUrl);
+    const response = await fetch(proxyUrl, {
+      headers: { 'User-Agent': 'Maple-News-Hub/1.0' },
+    });
     if (!response.ok) return undefined;
 
     const html = await response.text();

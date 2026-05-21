@@ -5,7 +5,7 @@ A live Canadian news aggregator built with React, TypeScript, and Vite. Fetches,
 ## Features
 
 ### Content
-- **9 RSS/Atom feeds** from CBC News, CTV News, Global News, Toronto Star, and National Post
+- **16 RSS/Atom feeds** from CBC News, CTV News, Global News, National Post, The Globe and Mail, and more
 - **Dual format parsing** -- auto-detects and parses both RSS 2.0 and Atom 1.0
 - **Image extraction** -- 5-tier fallback: enclosure → content `<img>` → description `<img>` → media:content → media:thumbnail → og:image from article pages
 - **Reading time estimates** (200 wpm) and relative date formatting
@@ -118,31 +118,73 @@ The Vite dev proxy must be replicated in production. Add these blocks to your ng
 location /api/feed/cbc/ {
     proxy_pass https://www.cbc.ca/;
     proxy_set_header Host www.cbc.ca;
-    proxy_set_header User-Agent "Canada-News-Hub/1.0";
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
 }
 
 location /api/feed/ctv/ {
     proxy_pass https://www.ctvnews.ca/;
     proxy_set_header Host www.ctvnews.ca;
-    proxy_set_header User-Agent "Canada-News-Hub/1.0";
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
 }
 
 location /api/feed/globalnews/ {
     proxy_pass https://globalnews.ca/;
     proxy_set_header Host globalnews.ca;
-    proxy_set_header User-Agent "Canada-News-Hub/1.0";
-}
-
-location /api/feed/thestar/ {
-    proxy_pass https://www.thestar.com/;
-    proxy_set_header Host www.thestar.com;
-    proxy_set_header User-Agent "Canada-News-Hub/1.0";
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
 }
 
 location /api/feed/nationalpost/ {
     proxy_pass https://nationalpost.com/;
     proxy_set_header Host nationalpost.com;
-    proxy_set_header User-Agent "Canada-News-Hub/1.0";
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/globeandmail/ {
+    proxy_pass https://www.theglobeandmail.com/;
+    proxy_set_header Host www.theglobeandmail.com;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/macleans/ {
+    proxy_pass https://www.macleans.ca/;
+    proxy_set_header Host www.macleans.ca;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/ipolitics/ {
+    proxy_pass https://www.ipolitics.ca/;
+    proxy_set_header Host www.ipolitics.ca;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/canadianpress/ {
+    proxy_pass https://www.thecanadianpress.com/;
+    proxy_set_header Host www.thecanadianpress.com;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/bnnbloomberg/ {
+    proxy_pass https://www.bnnbloomberg.ca/;
+    proxy_set_header Host www.bnnbloomberg.ca;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/aptnnews/ {
+    proxy_pass https://www.aptnnews.ca/;
+    proxy_set_header Host www.aptnnews.ca;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/thenarwhal/ {
+    proxy_pass https://thenarwhal.ca/;
+    proxy_set_header Host thenarwhal.ca;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
+}
+
+location /api/feed/citynews/ {
+    proxy_pass https://www.citynews.ca/;
+    proxy_set_header Host www.citynews.ca;
+    proxy_set_header User-Agent "Maple-News-Hub/1.0";
 }
 
 # Static SPA
@@ -155,7 +197,7 @@ location / {
 ### Security Headers
 
 ```nginx
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://www.cbc.ca https://www.ctvnews.ca https://globalnews.ca https://www.thestar.com https://nationalpost.com; font-src 'self';" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://www.cbc.ca https://www.ctvnews.ca https://globalnews.ca https://nationalpost.com https://www.theglobeandmail.com https://www.macleans.ca https://www.ipolitics.ca https://www.thecanadianpress.com https://www.bnnbloomberg.ca https://www.aptnnews.ca https://thenarwhal.ca https://www.citynews.ca; font-src 'self';" always;
 add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
@@ -187,6 +229,14 @@ scp -r dist/* user@server:/var/www/canada-news-hub/
 | CBC World | World |
 | Global News | National |
 | National Post | National |
+| The Globe and Mail | National |
+| Maclean's | National |
+| iPolitics | Politics |
+| The Canadian Press | National |
+| BNN Bloomberg | Business |
+| APTN News | Indigenous |
+| The Narwhal | Environment |
+| CityNews | National |
 | CBC Politics | Politics |
 | CBC Business | Business |
 

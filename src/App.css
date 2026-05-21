@@ -1779,11 +1779,16 @@ html.dark .app-header {
     padding: 0.625rem 0.875rem;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: var(--color-surface-solid);
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, #8b0000 50%, var(--color-primary) 100%);
   }
 
   .header-content {
     gap: 0.625rem;
+  }
+
+  .header-logo {
+    width: 64px;
+    height: 64px;
   }
 
   .header-brand h1 {
