@@ -264,6 +264,12 @@ function extractImageFromPage(html: string): string | undefined {
   const twitterImageAlt = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/);
   if (twitterImageAlt) return twitterImageAlt[1];
 
+  const postmediaCdn = html.match(/https:\/\/smartcdn\.gprod\.postmedia\.digital\/nationalpost\/wp-content\/uploads\/[^"'\s]+/);
+  if (postmediaCdn) return postmediaCdn[0];
+
+  const firstLargeImg = html.match(/<img[^>]+src=["']([^"'>]+\.(?:jpg|jpeg|png|webp))["'][^>]*(?:width=["']\d{3,}["']|class=["'][^"']*large[^"']*["'])/i);
+  if (firstLargeImg) return firstLargeImg[1];
+
   return undefined;
 }
 
