@@ -289,7 +289,7 @@ async function fetchArticleImage(articleUrl: string): Promise<string | undefined
   }
 }
 
-export async function fetchAllFeeds(sources: NewsSource[]): Promise<FeedResult> {
+export async function fetchAllFeeds(sources: NewsSource[], onImagesUpdated?: (articles: Article[]) => void): Promise<FeedResult> {
   const results = await Promise.allSettled(sources.map(async (source, index) => {
     const result = await fetchSourceFeed(source);
     return { ...result, index };
@@ -335,17 +335,17 @@ export async function fetchAllFeeds(sources: NewsSource[]): Promise<FeedResult> 
   allArticles.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
   // Fetch images in background without blocking
-  fetchMissingImages(allArticles);
+  fetchMissingImages(allArticles, onImagesUpdated);
 
   return { articles: allArticles, errors, sourceHealth };
 }
 
-async function fetchMissingImages(articles: Article[]): Promise<void> {
+async function fetchMissingImages(articles: Article[], onImagesUpdated?: (articles: Article[]) => void): Promise<void> {
   const articlesWithoutImages = articles.filter(a => !a.imageUrl && a.url !== '#');
   if (articlesWithoutImages.length === 0) return;
 
   const batchSize = 3;
-  const updatedImages = new Map<string, string>();
+  let hasUpdates = false;
 
   for (let i = 0; i < articlesWithoutImages.length; i += batchSize) {
     const batch = articlesWithoutImages.slice(i, i + batchSize);
@@ -353,19 +353,20 @@ async function fetchMissingImages(articles: Article[]): Promise<void> {
 
     imageResults.forEach((result, index) => {
       if (result.status === 'fulfilled' && result.value) {
-        updatedImages.set(batch[index].url, result.value);
+        const article = articles.find(a => a.url === batch[index].url);
+        if (article) {
+          article.imageUrl = result.value;
+          hasUpdates = true;
+        }
       }
     });
 
+    if (hasUpdates && onImagesUpdated) {
+      onImagesUpdated([...articles]);
+    }
+
     if (i + batchSize < articlesWithoutImages.length) {
       await new Promise(resolve => setTimeout(resolve, 300));
-    }
-  }
-
-  // Update articles with fetched images
-  for (const article of articles) {
-    if (!article.imageUrl && updatedImages.has(article.url)) {
-      article.imageUrl = updatedImages.get(article.url);
     }
   }
 }

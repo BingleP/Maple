@@ -210,7 +210,9 @@ function App() {
         return;
       }
 
-      const result = await fetchAllFeeds(activeSources);
+      const result = await fetchAllFeeds(activeSources, (updatedArticles) => {
+        setArticles(updatedArticles);
+      });
       
       feedCacheRef.current.set(cacheKey, {
         articles: result.articles,
