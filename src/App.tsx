@@ -164,7 +164,7 @@ function App() {
         searchInput?.focus();
       } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        loadNews(true);
+        loadNewsRef.current(true);
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setDarkMode(prev => !prev);
@@ -248,8 +248,10 @@ function App() {
     }
   }, [addToast]);
 
+  const loadNewsRef = useRef<(forceRefresh?: boolean, sourcesOverride?: string[]) => Promise<void>>(() => Promise.resolve());
+
   useEffect(() => {
-    loadNewsRef.current = (sources?: string[]) => loadNews(false, sources);
+    loadNewsRef.current = loadNews;
   }, [loadNews]);
 
   useEffect(() => {
@@ -271,9 +273,9 @@ function App() {
       setLastUpdated(new Date(cached.timestamp));
       setLoading(false);
     } else {
-      loadNews(false, selectedSources);
+      loadNewsRef.current(false, selectedSources);
     }
-  }, [selectedSources, loadNews]);
+  }, [selectedSources]);
 
   useEffect(() => {
     if (autoRefreshRef.current) {
@@ -282,7 +284,7 @@ function App() {
 
     if (autoRefreshEnabled) {
       autoRefreshRef.current = setInterval(() => {
-        loadNews(true);
+        loadNewsRef.current(true);
       }, AUTO_REFRESH_INTERVAL);
     }
 
@@ -291,7 +293,7 @@ function App() {
         clearInterval(autoRefreshRef.current);
       }
     };
-  }, [autoRefreshEnabled, loadNews]);
+  }, [autoRefreshEnabled]);
 
   const handleToggleSource = (sourceName: string) => {
     setSelectedSources(prev =>
@@ -310,7 +312,7 @@ function App() {
   };
 
   const handleRefresh = () => {
-    loadNews(true);
+    loadNewsRef.current(true);
   };
 
   const handleToggleDarkMode = () => {
