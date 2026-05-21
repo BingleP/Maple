@@ -186,7 +186,6 @@ scp -r dist/* user@server:/var/www/canada-news-hub/
 | CTV News | Top Stories |
 | CBC World | World |
 | Global News | National |
-| Toronto Star | Regional |
 | National Post | National |
 | CBC Politics | Politics |
 | CBC Business | Business |

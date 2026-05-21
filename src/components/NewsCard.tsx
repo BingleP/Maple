@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Article } from '../types';
-import { formatDate, estimateReadingTime } from '../utils/format';
+import { formatDate } from '../utils/format';
 
 interface NewsCardProps {
   article: Article;
@@ -28,7 +28,6 @@ const SOURCE_COLORS: Record<string, string> = {
 
 export const NewsCard = memo(function NewsCard({ article, isBookmarked, isRead, onToggleBookmark, onMarkRead, onPreview, onShare, onSpeak, viewMode = 'card' }: NewsCardProps) {
   const bgColor = SOURCE_COLORS[article.sourceName] || '#6b7280';
-  const readTime = estimateReadingTime(article.description);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -75,7 +74,6 @@ export const NewsCard = memo(function NewsCard({ article, isBookmarked, isRead, 
           <div className="compact-meta">
             <span className="news-card-source">{article.sourceName}</span>
             <time className="news-card-date" dateTime={article.publishedAt}>{formatDate(article.publishedAt)}</time>
-            <span className="reading-time">{readTime} min</span>
           </div>
           <h3 className="compact-title">
             <a href={article.url} target="_blank" rel="noopener noreferrer" onClick={handleClick}>
@@ -143,7 +141,6 @@ export const NewsCard = memo(function NewsCard({ article, isBookmarked, isRead, 
             <time className="news-card-date" dateTime={article.publishedAt}>
               {formatDate(article.publishedAt)}
             </time>
-            <span className="reading-time">{readTime} min read</span>
           </span>
         </div>
         <h3 className="news-card-title">

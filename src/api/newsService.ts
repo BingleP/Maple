@@ -32,12 +32,6 @@ export const CANADIAN_SOURCES: NewsSource[] = [
     category: 'National',
   },
   {
-    name: 'Toronto Star',
-    feedUrl: '/api/feed/thestar/search/?f=rss&t=article&c=news/*',
-    homepage: 'https://www.thestar.com',
-    category: 'Regional',
-  },
-  {
     name: 'National Post',
     feedUrl: '/api/feed/nationalpost/feed',
     homepage: 'https://nationalpost.com',
@@ -129,13 +123,19 @@ function extractImage(item: Element, description: string, content: string): stri
   const enclosureUrl = enclosure?.getAttribute('url');
   if (enclosureUrl) return enclosureUrl;
 
-  const mediaContent = item.querySelector('media\\:content[medium="image"], media\\:content');
-  const mediaContentUrl = mediaContent?.getAttribute('url');
-  if (mediaContentUrl) return mediaContentUrl;
+  const mediaContentEls = item.getElementsByTagName('media:content');
+  if (mediaContentEls.length > 0) {
+    for (let i = 0; i < mediaContentEls.length; i++) {
+      const url = mediaContentEls[i].getAttribute('url');
+      if (url) return url;
+    }
+  }
 
-  const mediaThumbnail = item.querySelector('media\\:thumbnail, thumbnail');
-  const mediaThumbnailUrl = mediaThumbnail?.getAttribute('url');
-  if (mediaThumbnailUrl) return mediaThumbnailUrl;
+  const mediaThumbnailEls = item.getElementsByTagName('media:thumbnail');
+  if (mediaThumbnailEls.length > 0) {
+    const url = mediaThumbnailEls[0].getAttribute('url');
+    if (url) return url;
+  }
 
   const imgFromContent = extractImageFromContent(content);
   if (imgFromContent) return imgFromContent;
@@ -168,7 +168,9 @@ function parseRSS(xml: string, sourceName: string, sourceCategory: string): Arti
   items.forEach((item) => {
     const title = item.querySelector('title')?.textContent || 'No title';
     const link = item.querySelector('link')?.textContent || '#';
-    const pubDate = item.querySelector('pubDate')?.textContent || new Date().toISOString();
+    const pubDate = item.querySelector('pubDate')?.textContent
+      || item.querySelector('dc\\:date')?.textContent
+      || '';
     const description = item.querySelector('description')?.textContent || '';
     const content = item.querySelector('content\\:encoded, encoded')?.textContent || description;
     const imageUrl = extractImage(item, description, content);
@@ -176,18 +178,25 @@ function parseRSS(xml: string, sourceName: string, sourceCategory: string): Arti
     const categoryEl = item.querySelector('category');
     const category = categoryEl?.textContent || sourceCategory;
 
+    const publishedAt = pubDate ? new Date(pubDate).toISOString() : new Date().toISOString();
+
     articles.push({
       title: title.trim(),
       description: cleanDescription(description),
       url: link,
       sourceName,
-      publishedAt: new Date(pubDate).toISOString(),
+      publishedAt,
       imageUrl,
       category,
     });
   });
 
   return articles;
+}
+
+function getAtomText(entry: Element, tagName: string): string | undefined {
+  const els = entry.getElementsByTagName(tagName);
+  return els.length > 0 ? els[0].textContent || undefined : undefined;
 }
 
 function parseAtom(xml: string, sourceName: string, sourceCategory: string): Article[] {
@@ -207,7 +216,10 @@ function parseAtom(xml: string, sourceName: string, sourceCategory: string): Art
     const title = entry.querySelector('title')?.textContent || 'No title';
     const linkEl = entry.querySelector('link[rel="alternate"], link');
     const link = linkEl?.getAttribute('href') || '#';
-    const updated = entry.querySelector('updated, published')?.textContent || new Date().toISOString();
+    const updated = getAtomText(entry, 'updated')
+      || getAtomText(entry, 'published')
+      || getAtomText(entry, 'date')
+      || '';
     const summary = entry.querySelector('summary')?.textContent || entry.querySelector('content')?.textContent || '';
     const contentEl = entry.querySelector('content');
     const imageUrl = extractImage(entry, summary, contentEl?.textContent || summary);
@@ -215,12 +227,14 @@ function parseAtom(xml: string, sourceName: string, sourceCategory: string): Art
     const categoryEl = entry.querySelector('category');
     const category = categoryEl?.getAttribute('term') || sourceCategory;
 
+    const publishedAt = updated ? new Date(updated).toISOString() : new Date().toISOString();
+
     articles.push({
       title: title.trim(),
       description: cleanDescription(summary),
       url: link,
       sourceName,
-      publishedAt: new Date(updated).toISOString(),
+      publishedAt,
       imageUrl,
       category,
     });
@@ -248,21 +262,32 @@ async function fetchSourceFeed(source: NewsSource): Promise<{ articles: Article[
 function getSourceProxyPrefix(url: string): string | null {
   const source = CANADIAN_SOURCES.find(s => url.startsWith(s.homepage));
   if (!source) return null;
-  return source.feedUrl.replace(/\/[^/]+$/, '');
+  // Extract proxy prefix like /api/feed/cbc from feedUrl like /api/feed/cbc/webfeed/rss/...
+  const match = source.feedUrl.match(/^(\/api\/feed\/[^/]+)/);
+  return match ? match[1] : null;
+}
+
+function extractMetaContent(html: string, attrValue: string, contentAttr: string = 'content'): string | undefined {
+  const metaRegex = /<meta\b([^>]+)>/gi;
+  let match;
+  while ((match = metaRegex.exec(html)) !== null) {
+    const attrs = match[1];
+    const nameRegex = new RegExp(`(?:property|name|itemprop)=["']${attrValue}["']`, 'i');
+    if (nameRegex.test(attrs)) {
+      const contentRegex = new RegExp(`${contentAttr}=["']([^"']+)["']`, 'i');
+      const contentMatch = contentRegex.exec(attrs);
+      if (contentMatch) return contentMatch[1];
+    }
+  }
+  return undefined;
 }
 
 function extractImageFromPage(html: string): string | undefined {
-  const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/);
-  if (ogImage) return ogImage[1];
+  const ogImage = extractMetaContent(html, 'og:image');
+  if (ogImage) return ogImage;
 
-  const ogImageAlt = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/);
-  if (ogImageAlt) return ogImageAlt[1];
-
-  const twitterImage = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/);
-  if (twitterImage) return twitterImage[1];
-
-  const twitterImageAlt = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/);
-  if (twitterImageAlt) return twitterImageAlt[1];
+  const twitterImage = extractMetaContent(html, 'twitter:image');
+  if (twitterImage) return twitterImage;
 
   const postmediaCdn = html.match(/https:\/\/smartcdn\.gprod\.postmedia\.digital\/nationalpost\/wp-content\/uploads\/[^"'\s]+/);
   if (postmediaCdn) return postmediaCdn[0];
@@ -350,7 +375,16 @@ export async function fetchAllFeeds(sources: NewsSource[], onImagesUpdated?: (ar
     }
   });
 
-  allArticles.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  const now = new Date().getTime();
+  allArticles.sort((a, b) => {
+    const timeA = new Date(a.publishedAt).getTime();
+    const timeB = new Date(b.publishedAt).getTime();
+    const aIsFuture = timeA > now;
+    const bIsFuture = timeB > now;
+    if (aIsFuture && !bIsFuture) return 1;
+    if (!aIsFuture && bIsFuture) return -1;
+    return timeB - timeA;
+  });
 
   // Fetch images in background without blocking
   fetchMissingImages(allArticles, onImagesUpdated);

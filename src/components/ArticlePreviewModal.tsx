@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Article } from '../types';
-import { formatFullDate, estimateReadingTime } from '../utils/format';
+import { formatFullDate } from '../utils/format';
 
 interface ArticlePreviewModalProps {
   article: Article | null;
@@ -51,8 +51,6 @@ export function ArticlePreviewModal({ article, onClose, onOpenFull }: ArticlePre
 
   if (!article) return null;
 
-  const readTime = estimateReadingTime(article.description);
-
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) handleClose();
   };
@@ -78,7 +76,6 @@ export function ArticlePreviewModal({ article, onClose, onOpenFull }: ArticlePre
           <div className="modal-meta">
             <span className="modal-source">{article.sourceName}</span>
             {article.category && <span className="modal-category">{article.category}</span>}
-            <span className="modal-read-time">{readTime} min read</span>
           </div>
           <h2 className="modal-title" id="modal-title">{article.title}</h2>
           <time className="modal-date" dateTime={article.publishedAt}>

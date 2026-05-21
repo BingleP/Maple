@@ -8,7 +8,7 @@ import { ToastContainer } from './components/Toast';
 import { ArticlePreviewModal } from './components/ArticlePreviewModal';
 import { TopKeywords } from './components/TopKeywords';
 import { FeedStats } from './components/FeedStats';
-import { extractKeywords, KeywordInfo } from './utils/keywords';
+import { extractKeywords } from './utils/keywords';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
@@ -134,6 +134,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem(STORAGE_KEY_DARK_MODE, JSON.stringify(darkMode));
   }, [darkMode]);
@@ -168,7 +174,7 @@ function App() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
       if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault();
-        document.querySelector('.search-bar input')?.focus();
+        (document.querySelector('.search-bar input') as HTMLInputElement)?.focus();
       } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         loadNews(true);
@@ -256,10 +262,6 @@ function App() {
   }, [addToast]);
 
   useEffect(() => {
-    loadNews();
-  }, []);
-
-  useEffect(() => {
     const activeSources = CANADIAN_SOURCES.filter(s => selectedSources.includes(s.name));
     if (activeSources.length === 0) {
       setArticles([]);
@@ -329,15 +331,15 @@ function App() {
   const handleRefresh = () => loadNews(true);
   const handleToggleDarkMode = () => setDarkMode(prev => !prev);
   const handleToggleAutoRefresh = () => {
-    setAutoRefreshEnabled(prev => !prev);
-    addToast(autoRefreshEnabled ? 'Auto-refresh disabled' : 'Auto-refresh enabled (10 min)', 'info');
+    const next = !autoRefreshEnabled;
+    setAutoRefreshEnabled(next);
+    addToast(next ? 'Auto-refresh enabled (10 min)' : 'Auto-refresh disabled', 'info');
   };
   const handleToggleBookmarks = () => setShowBookmarkedOnly(prev => !prev);
 
   const handleClearHistory = () => {
-    setBookmarkedUrls(new Set());
     setReadUrls(new Set());
-    addToast('History cleared', 'success');
+    addToast('Read history cleared', 'success');
   };
 
   const handleExportBookmarks = () => {
@@ -428,7 +430,18 @@ function App() {
   const sortedArticles = useMemo(() => {
     if (sortBy === 'newest') return articles;
     const sorted = [...articles];
-    if (sortBy === 'oldest') sorted.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
+    const now = new Date().getTime();
+    if (sortBy === 'oldest') {
+      sorted.sort((a, b) => {
+        const timeA = new Date(a.publishedAt).getTime();
+        const timeB = new Date(b.publishedAt).getTime();
+        const aIsFuture = timeA > now;
+        const bIsFuture = timeB > now;
+        if (aIsFuture && !bIsFuture) return 1;
+        if (!aIsFuture && bIsFuture) return -1;
+        return timeA - timeB;
+      });
+    }
     else sorted.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
     return sorted;
   }, [articles, sortBy]);

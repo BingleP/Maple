@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Article, SourceError } from '../types';
 import { NewsCard } from './NewsCard';
 import { SkeletonCard } from './SkeletonCard';
@@ -84,9 +84,9 @@ export function NewsList({ articles, loading, sourceErrors, bookmarkedUrls, read
   const displayArticles = articles.slice(0, visibleCount);
 
   const renderCards = (items: Article[]) => (
-    items.map((article, index) => (
+    items.map((article) => (
       <NewsCard
-        key={`${article.url}-${index}`}
+        key={article.url}
         article={article}
         isBookmarked={bookmarkedUrls.has(article.url)}
         isRead={readUrls.has(article.url)}

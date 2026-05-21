@@ -16,11 +16,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/feed\/globalnews/, ''),
       },
-      '/api/feed/thestar': {
-        target: 'https://www.thestar.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/feed\/thestar/, ''),
-      },
       '/api/feed/nationalpost': {
         target: 'https://nationalpost.com',
         changeOrigin: true,
