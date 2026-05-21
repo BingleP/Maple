@@ -182,9 +182,9 @@ export interface KeywordInfo {
   count: number;
 }
 
-export function extractKeywords(articles: Article[], maxKeywords: number = 20): KeywordInfo[] {
+export function extractKeywords(articles: Article[], maxKeywords: number = 30): KeywordInfo[] {
   const frequency = new Map<string, number>();
-  const minFrequency = Math.max(2, Math.floor(articles.length * 0.03));
+  const minFrequency = Math.max(2, Math.floor(articles.length * 0.01));
 
   for (const article of articles) {
     const text = `${article.title} ${article.description}`.toLowerCase();

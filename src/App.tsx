@@ -417,7 +417,7 @@ function App() {
     return result;
   }, [sortedArticles, selectedCategory, showBookmarkedOnly, bookmarkedUrls, searchQuery]);
 
-  const topKeywords = useMemo(() => extractKeywords(filteredArticles, 25), [filteredArticles]);
+  const topKeywords = useMemo(() => extractKeywords(articles, 25), [articles]);
 
   const sourceStats = useMemo(() => {
     const stats = new Map<string, number>();
