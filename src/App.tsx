@@ -428,10 +428,11 @@ function App() {
   );
 
   const sortedArticles = useMemo(() => {
-    if (sortBy === 'newest') return articles;
-    const sorted = [...articles];
     const now = new Date().getTime();
-    if (sortBy === 'oldest') {
+    const sorted = [...articles];
+    if (sortBy === 'source') {
+      sorted.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
+    } else {
       sorted.sort((a, b) => {
         const timeA = new Date(a.publishedAt).getTime();
         const timeB = new Date(b.publishedAt).getTime();
@@ -439,10 +440,9 @@ function App() {
         const bIsFuture = timeB > now;
         if (aIsFuture && !bIsFuture) return 1;
         if (!aIsFuture && bIsFuture) return -1;
-        return timeA - timeB;
+        return sortBy === 'oldest' ? timeA - timeB : timeB - timeA;
       });
     }
-    else sorted.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
     return sorted;
   }, [articles, sortBy]);
 
