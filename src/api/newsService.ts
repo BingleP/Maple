@@ -129,19 +129,19 @@ function extractImage(item: Element, description: string, content: string): stri
   const enclosureUrl = enclosure?.getAttribute('url');
   if (enclosureUrl) return enclosureUrl;
 
-  const imgFromContent = extractImageFromContent(content);
-  if (imgFromContent) return imgFromContent;
-
-  const imgFromDescription = extractImageFromContent(description);
-  if (imgFromDescription) return imgFromDescription;
-
-  const mediaContent = item.querySelector('media\\:content, content');
+  const mediaContent = item.querySelector('media\\:content[medium="image"], media\\:content');
   const mediaContentUrl = mediaContent?.getAttribute('url');
   if (mediaContentUrl) return mediaContentUrl;
 
   const mediaThumbnail = item.querySelector('media\\:thumbnail, thumbnail');
   const mediaThumbnailUrl = mediaThumbnail?.getAttribute('url');
   if (mediaThumbnailUrl) return mediaThumbnailUrl;
+
+  const imgFromContent = extractImageFromContent(content);
+  if (imgFromContent) return imgFromContent;
+
+  const imgFromDescription = extractImageFromContent(description);
+  if (imgFromDescription) return imgFromDescription;
 
   return undefined;
 }
