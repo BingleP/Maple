@@ -24,19 +24,22 @@ interface NewsListProps {
 export function NewsList({ articles, loading, sourceErrors, bookmarkedUrls, readUrls, onToggleBookmark, onMarkRead, onPreview, onShare, onSpeak, groupBySource, showBookmarkedOnly, viewMode }: NewsListProps) {
   const [visibleCount, setVisibleCount] = useState(INFINITE_SCROLL_INCREMENT);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const articlesLengthRef = useRef(articles.length);
 
   useEffect(() => {
+    articlesLengthRef.current = articles.length;
     setVisibleCount(INFINITE_SCROLL_INCREMENT);
   }, [articles]);
 
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     if (entries[0].isIntersecting) {
       setVisibleCount(prev => {
-        if (prev >= articles.length) return prev;
-        return Math.min(prev + INFINITE_SCROLL_INCREMENT, articles.length);
+        const currentLength = articlesLengthRef.current;
+        if (prev >= currentLength) return prev;
+        return Math.min(prev + INFINITE_SCROLL_INCREMENT, currentLength);
       });
     }
-  }, [articles.length]);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(handleObserver, {
@@ -50,6 +53,7 @@ export function NewsList({ articles, loading, sourceErrors, bookmarkedUrls, read
 
     return () => {
       if (current) observer.unobserve(current);
+      observer.disconnect();
     };
   }, [handleObserver]);
 
@@ -89,6 +93,23 @@ export function NewsList({ articles, loading, sourceErrors, bookmarkedUrls, read
 
   const displayArticles = articles.slice(0, visibleCount);
 
+  const renderCards = (items: Article[]) => (
+    items.map((article, index) => (
+      <NewsCard
+        key={`${article.url}-${index}`}
+        article={article}
+        isBookmarked={bookmarkedUrls.has(article.url)}
+        isRead={readUrls.has(article.url)}
+        onToggleBookmark={onToggleBookmark}
+        onMarkRead={onMarkRead}
+        onPreview={onPreview}
+        onShare={onShare}
+        onSpeak={onSpeak}
+        viewMode={viewMode}
+      />
+    ))
+  );
+
   if (groupBySource) {
     const grouped = new Map<string, Article[]>();
     for (const article of displayArticles) {
@@ -103,49 +124,19 @@ export function NewsList({ articles, loading, sourceErrors, bookmarkedUrls, read
           <div key={source} className="news-source-group">
             <h3 className="source-group-header">{source} <span className="source-count">({sourceArticles.length})</span></h3>
             <div className="source-group-articles">
-              {sourceArticles.map((article, index) => (
-                <NewsCard
-                  key={`${article.url}-${index}`}
-                  article={article}
-                  isBookmarked={bookmarkedUrls.has(article.url)}
-                  isRead={readUrls.has(article.url)}
-                  onToggleBookmark={onToggleBookmark}
-                  onMarkRead={onMarkRead}
-                  onPreview={onPreview}
-                  onShare={onShare}
-                  onSpeak={onSpeak}
-                  viewMode={viewMode}
-                />
-              ))}
+              {renderCards(sourceArticles)}
             </div>
           </div>
         ))}
-        {visibleCount < articles.length && (
-          <div className="scroll-sentinel" ref={sentinelRef}></div>
-        )}
+        <div className="scroll-sentinel" ref={sentinelRef} style={{ height: '1px', width: '100%' }}></div>
       </div>
     );
   }
 
   return (
     <div className={`news-list ${viewMode === 'compact' ? 'news-list-compact' : ''}`}>
-      {displayArticles.map((article, index) => (
-        <NewsCard
-          key={`${article.url}-${index}`}
-          article={article}
-          isBookmarked={bookmarkedUrls.has(article.url)}
-          isRead={readUrls.has(article.url)}
-          onToggleBookmark={onToggleBookmark}
-          onMarkRead={onMarkRead}
-          onPreview={onPreview}
-          onShare={onShare}
-          onSpeak={onSpeak}
-          viewMode={viewMode}
-        />
-      ))}
-      {visibleCount < articles.length && (
-        <div className="scroll-sentinel" ref={sentinelRef}></div>
-      )}
+      {renderCards(displayArticles)}
+      <div className="scroll-sentinel" ref={sentinelRef} style={{ height: '1px', width: '100%' }}></div>
     </div>
   );
 }
