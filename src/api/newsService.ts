@@ -57,7 +57,7 @@ export const CANADIAN_SOURCES: NewsSource[] = [
   },
   {
     name: 'The Globe and Mail',
-    feedUrl: '/api/feed/globeandmail/arc/outboundfeeds/rss/',
+    feedUrl: '/api/feed/globeandmail/arc/outboundfeeds/rss/?outputType=xml',
     homepage: 'https://www.theglobeandmail.com',
     category: 'National',
   },
@@ -80,30 +80,6 @@ export const CANADIAN_SOURCES: NewsSource[] = [
     category: 'National',
   },
   {
-    name: 'Vancouver Sun',
-    feedUrl: '/api/feed/vancouversun/feed/',
-    homepage: 'https://vancouversun.com',
-    category: 'Regional',
-  },
-  {
-    name: 'Calgary Herald',
-    feedUrl: '/api/feed/calgaryherald/feed/',
-    homepage: 'https://calgaryherald.com',
-    category: 'Regional',
-  },
-  {
-    name: 'Ottawa Citizen',
-    feedUrl: '/api/feed/ottawacitizen/feed/',
-    homepage: 'https://ottawacitizen.com',
-    category: 'Regional',
-  },
-  {
-    name: 'Montreal Gazette',
-    feedUrl: '/api/feed/montrealgazette/feed/',
-    homepage: 'https://montrealgazette.com',
-    category: 'Regional',
-  },
-  {
     name: 'BNN Bloomberg',
     feedUrl: '/api/feed/bnnbloomberg/arc/outboundfeeds/rss/',
     homepage: 'https://www.bnnbloomberg.ca',
@@ -120,12 +96,6 @@ export const CANADIAN_SOURCES: NewsSource[] = [
     feedUrl: '/api/feed/thenarwhal/feed/',
     homepage: 'https://thenarwhal.ca',
     category: 'Environment',
-  },
-  {
-    name: 'La Presse',
-    feedUrl: '/api/feed/lapresse/actualites/rss.xml',
-    homepage: 'https://www.lapresse.ca',
-    category: 'National',
   },
   {
     name: 'CityNews',

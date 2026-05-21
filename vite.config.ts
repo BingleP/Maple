@@ -51,26 +51,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/feed\/canadianpress/, ''),
       },
-      '/api/feed/vancouversun': {
-        target: 'https://vancouversun.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/feed\/vancouversun/, ''),
-      },
-      '/api/feed/calgaryherald': {
-        target: 'https://calgaryherald.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/feed\/calgaryherald/, ''),
-      },
-      '/api/feed/ottawacitizen': {
-        target: 'https://ottawacitizen.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/feed\/ottawacitizen/, ''),
-      },
-      '/api/feed/montrealgazette': {
-        target: 'https://montrealgazette.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/feed\/montrealgazette/, ''),
-      },
       '/api/feed/bnnbloomberg': {
         target: 'https://www.bnnbloomberg.ca',
         changeOrigin: true,
@@ -85,11 +65,6 @@ export default defineConfig({
         target: 'https://thenarwhal.ca',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/feed\/thenarwhal/, ''),
-      },
-      '/api/feed/lapresse': {
-        target: 'https://www.lapresse.ca',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/feed\/lapresse/, ''),
       },
       '/api/feed/citynews': {
         target: 'https://www.citynews.ca',
