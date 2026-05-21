@@ -170,7 +170,8 @@ const STOP_WORDS = new Set([
   'possibly', 'previously', 'primarily', 'quickly', 'rarely', 'recently',
   'seriously', 'simply', 'slightly', 'slowly', 'suddenly', 'typically',
   'ultimately', 'usually', 'widely', 'despite', 'except', 'worth',
-  'times', 'divided',
+  'times', 'divided', 'comes', 'amid', 'three', 'facing', 'much', 'city',
+  'national', 'members', 'province',
 ]);
 
 export interface KeywordInfo {
